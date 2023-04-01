@@ -1,5 +1,5 @@
-name: NovaMissileWars
-main: net.novauniverse.games.missilewars.NovaMissileWars
+name: NovaMissileWarsFinalGame
+main: net.novauniverse.games.finalgame.missilewars.NovaFinalMissileWars
 description: Novauniverse Missile Wars
 version: 1.0
 depend: [NovaCore, NovaCoreGameEngine]
