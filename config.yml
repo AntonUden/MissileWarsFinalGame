@@ -1,3 +1,1 @@
-use_team_balancer: false
-
-map_download_url: "https://novauniverse.net/cdn/missilewars/missilewars.zip"
+map_download_url: "https://novauniverse.s3.amazonaws.com/maps/missilewars/missilewars.zip"
