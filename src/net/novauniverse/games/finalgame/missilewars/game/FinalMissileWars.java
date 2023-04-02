@@ -59,6 +59,8 @@ import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.GameTr
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.RepeatingGameTrigger;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.TriggerCallback;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.TriggerFlag;
+import net.zeeraa.novacore.spigot.gameengine.module.modules.gamelobby.GameLobby;
+import net.zeeraa.novacore.spigot.module.ModuleManager;
 import net.zeeraa.novacore.spigot.module.modules.customitems.CustomItem;
 import net.zeeraa.novacore.spigot.module.modules.customitems.CustomItemManager;
 import net.zeeraa.novacore.spigot.tasks.SimpleTask;
@@ -336,6 +338,8 @@ public class FinalMissileWars extends Game implements Listener {
 
 		team1.getOnlinePlayers().forEach(this::addPlayer);
 		team2.getOnlinePlayers().forEach(this::addPlayer);
+		
+		ModuleManager.disable(GameLobby.class);
 
 		Log.debug("MissileWars", "Player count: " + this.players.size());
 
