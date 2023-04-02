@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -54,6 +55,7 @@ import net.zeeraa.novacore.spigot.abstraction.events.VersionIndependentPlayerAch
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.Game;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.GameEndReason;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.elimination.PlayerQuitEliminationAction;
+import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.DelayedGameTrigger;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.GameTrigger;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.RepeatingGameTrigger;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.TriggerCallback;
@@ -68,6 +70,7 @@ import net.zeeraa.novacore.spigot.teams.TeamManager;
 import net.zeeraa.novacore.spigot.utils.LocationData;
 import net.zeeraa.novacore.spigot.utils.LocationUtils;
 import net.zeeraa.novacore.spigot.utils.PlayerUtils;
+import net.zeeraa.novacore.spigot.utils.VectorArea;
 import net.zeeraa.novacore.spigot.utils.VectorUtils;
 
 public class FinalMissileWars extends Game implements Listener {
@@ -80,6 +83,7 @@ public class FinalMissileWars extends Game implements Listener {
 	private List<TeamConfig> teamConfigs;
 
 	private GameTrigger lootTrigger;
+	private GameTrigger suddenDeathTrigger;
 
 	private Task winCheckTask;
 	private Task playerCheckTask;
@@ -91,6 +95,10 @@ public class FinalMissileWars extends Game implements Listener {
 
 	private List<PortalLocation> portalLocations;
 	private List<GameObject> gameObjects;
+
+	private List<VectorArea> suddenDeathAreas;
+
+	private boolean suddenDeathCalled;
 
 	private LocationData spawnLocation;
 
@@ -195,9 +203,13 @@ public class FinalMissileWars extends Game implements Listener {
 	public Location getSpawnLocation() {
 		return spawnLocation.toLocation(world);
 	}
-	
+
 	public GameTrigger getLootTrigger() {
 		return lootTrigger;
+	}
+
+	public GameTrigger getSuddenDeathTrigger() {
+		return suddenDeathTrigger;
 	}
 
 	@Override
@@ -209,6 +221,8 @@ public class FinalMissileWars extends Game implements Listener {
 		this.gameObjects = new ArrayList<>();
 		this.teamConfigs = new ArrayList<>();
 		this.portalLocations = new ArrayList<>();
+		this.suddenDeathAreas = new ArrayList<>();
+		this.suddenDeathCalled = false;
 
 		this.winCheckTask = new SimpleTask(() -> {
 			portalLocations.stream().filter(p -> p.isBroken(world)).findFirst().ifPresent(portalLocation -> {
@@ -278,6 +292,12 @@ public class FinalMissileWars extends Game implements Listener {
 		JSONObject spawnLocations = mapConfig.getJSONObject("spawn_locations");
 		JSONObject portalSamplingAreas = mapConfig.getJSONObject("portal_sampling_areas");
 
+		JSONArray suddenDeathAreasJSON = mapConfig.getJSONArray("sudden_death_clear_areas");
+		for (int i = 0; i < suddenDeathAreasJSON.length(); i++) {
+			suddenDeathAreas.add(VectorArea.fromJSON(suddenDeathAreasJSON.getJSONObject(i)));
+		}
+		Log.debug("MissileWars", suddenDeathAreas.size() + " sudden death areas loaded");
+
 		for (GameObjectType type : GameObjectType.values()) {
 			Vector position = VectorUtils.fromJSONObject(gameObjectPosition.getJSONObject(type.name()));
 			Vector relative = VectorUtils.fromJSONObject(gameObjectRelative.getJSONObject(type.name()));
@@ -308,7 +328,7 @@ public class FinalMissileWars extends Game implements Listener {
 
 		INSTANT_KILL_Y = mapConfig.optInt("instant_kill_y", -1);
 
-		this.lootTrigger = new RepeatingGameTrigger("missilewars.loot", 1L, mapConfig.optLong("loot_interval", 280), new TriggerCallback() {
+		this.lootTrigger = new RepeatingGameTrigger("missilewars.loot", 1L, mapConfig.optLong("loot_interval", 14) * 20, new TriggerCallback() {
 			@Override
 			public void run(GameTrigger trigger, TriggerFlag reason) {
 				Class<? extends CustomItem> item = LootManager.getRandom(random);
@@ -329,7 +349,30 @@ public class FinalMissileWars extends Game implements Listener {
 		lootTrigger.addFlag(TriggerFlag.START_ON_GAME_START);
 		lootTrigger.addFlag(TriggerFlag.STOP_ON_GAME_END);
 
+		this.suddenDeathTrigger = new DelayedGameTrigger("missilewars.suddendeath", mapConfig.optLong("sudden_death_time", 1200) * 20, new TriggerCallback() {
+			@Override
+			public void run(GameTrigger trigger, TriggerFlag reason) {
+				suddenDeath();
+			}
+		});
+		suddenDeathTrigger.setDescription("Begin sudden death");
+		suddenDeathTrigger.addFlag(TriggerFlag.START_ON_GAME_START);
+		suddenDeathTrigger.addFlag(TriggerFlag.RUN_ONLY_ONCE);
+		suddenDeathTrigger.addFlag(TriggerFlag.STOP_ON_GAME_END);
+
 		addTrigger(lootTrigger);
+		addTrigger(suddenDeathTrigger);
+	}
+
+	public void suddenDeath() {
+		if (suddenDeathCalled) {
+			return;
+		}
+		suddenDeathAreas.forEach(a -> a.getAllVectors().forEach(v -> world.getBlockAt(v.getBlockX(), v.getBlockY(), v.getBlockZ()).setType(Material.AIR)));
+		Bukkit.getServer().broadcastMessage(ChatColor.RED + "Sudden death");
+		VersionIndependentUtils.get().broadcastTitle(ChatColor.RED + "Sudden death", "", 0, 40, 20);
+		VersionIndependentSound.WITHER_HURT.broadcast();
+		suddenDeathCalled = true;
 	}
 
 	@Override
@@ -416,7 +459,21 @@ public class FinalMissileWars extends Game implements Listener {
 
 		if (reason == GameEndReason.WIN) {
 			String message = winner.toTeam().getTeamColor() + ChatColor.BOLD.toString() + winner.toTeam().getDisplayName() + ChatColor.GREEN + ChatColor.BOLD + " won the game";
-			VersionIndependentUtils.get().broadcastTitle("", message, 0, 80, 20);
+			Bukkit.getServer().getOnlinePlayers().stream().filter(p -> !this.isPlayerInGame(p)).forEach(p -> VersionIndependentUtils.get().sendTitle(p, ChatColor.RED + "Game Over", message, 0, 80, 20));
+
+			Team teamWin;
+			Team teamLost;
+
+			if (winner == MissilewarsTeam.TEAM_1) {
+				teamWin = getTeam1();
+				teamLost = getTeam2();
+			} else {
+				teamWin = getTeam2();
+				teamLost = getTeam1();
+			}
+
+			teamWin.getOnlinePlayers().forEach(p -> VersionIndependentUtils.get().sendTitle(p, ChatColor.GREEN + "Winner", message, 0, 80, 20));
+			teamLost.getOnlinePlayers().forEach(p -> VersionIndependentUtils.get().sendTitle(p, ChatColor.RED + "Lost", message, 0, 80, 20));
 
 			Bukkit.getServer().broadcastMessage(message);
 
