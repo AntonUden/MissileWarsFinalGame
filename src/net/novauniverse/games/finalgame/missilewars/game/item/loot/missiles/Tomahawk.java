@@ -7,7 +7,6 @@ import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectTy
 import net.novauniverse.games.finalgame.missilewars.game.item.MissileItem;
 
 public class Tomahawk extends MissileItem {
-
 	public Tomahawk() {
 		super(ChatColor.DARK_GREEN + "Tomahawk", EntityType.CREEPER, GameObjectType.TOMAHAWK);
 	}

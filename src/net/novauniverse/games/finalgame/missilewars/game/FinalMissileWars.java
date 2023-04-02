@@ -1,5 +1,7 @@
 package net.novauniverse.games.finalgame.missilewars.game;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -22,12 +24,14 @@ import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import net.md_5.bungee.api.ChatColor;
 import net.novauniverse.games.finalgame.missilewars.NovaFinalMissileWars;
 import net.novauniverse.games.finalgame.missilewars.game.event.FinalGameMissileWarsGameEndEvent;
 import net.novauniverse.games.finalgame.missilewars.game.event.FinalGameMissileWarsGameStartEvent;
-import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectIndex;
+import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObject;
 import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectType;
 import net.novauniverse.games.finalgame.missilewars.game.item.GunBlade;
 import net.novauniverse.games.finalgame.missilewars.game.item.loot.armor.PlayerBoots;
@@ -35,16 +39,18 @@ import net.novauniverse.games.finalgame.missilewars.game.item.loot.armor.PlayerC
 import net.novauniverse.games.finalgame.missilewars.game.item.loot.armor.PlayerHelmet;
 import net.novauniverse.games.finalgame.missilewars.game.item.loot.armor.PlayerLeggings;
 import net.novauniverse.games.finalgame.missilewars.game.loot.LootManager;
-import net.novauniverse.games.finalgame.missilewars.game.world.DefaultMapData;
 import net.novauniverse.games.finalgame.missilewars.game.world.PortalLocation;
+import net.novauniverse.games.finalgame.missilewars.game.world.TeamConfig;
 import net.novauniverse.games.finalgame.missilewars.team.MissilewarsTeam;
 import net.zeeraa.novacore.commons.log.Log;
 import net.zeeraa.novacore.commons.tasks.Task;
+import net.zeeraa.novacore.commons.utils.JSONFileUtils;
 import net.zeeraa.novacore.commons.utils.Pair;
 import net.zeeraa.novacore.commons.utils.Rotation;
 import net.zeeraa.novacore.spigot.NovaCore;
 import net.zeeraa.novacore.spigot.abstraction.VersionIndependentUtils;
 import net.zeeraa.novacore.spigot.abstraction.enums.PlayerDamageReason;
+import net.zeeraa.novacore.spigot.abstraction.enums.VersionIndependentSound;
 import net.zeeraa.novacore.spigot.abstraction.events.VersionIndependentPlayerAchievementAwardedEvent;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.Game;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.GameEndReason;
@@ -58,18 +64,19 @@ import net.zeeraa.novacore.spigot.module.modules.customitems.CustomItemManager;
 import net.zeeraa.novacore.spigot.tasks.SimpleTask;
 import net.zeeraa.novacore.spigot.teams.Team;
 import net.zeeraa.novacore.spigot.teams.TeamManager;
+import net.zeeraa.novacore.spigot.utils.LocationData;
 import net.zeeraa.novacore.spigot.utils.LocationUtils;
 import net.zeeraa.novacore.spigot.utils.PlayerUtils;
+import net.zeeraa.novacore.spigot.utils.VectorUtils;
 
 public class FinalMissileWars extends Game implements Listener {
-	public static final int INSTANT_KILL_Y = -1;
-	public static final long LOOT_DELAY = 280L;
+	public static int INSTANT_KILL_Y = -1;
 
 	public static final long PLAYER_CHECK_TASK_INTERVAL = 5L;
 
 	private boolean started;
 	private boolean ended;
-	private List<PortalLocation> portalLocations;
+	private List<TeamConfig> teamConfigs;
 
 	private GameTrigger lootTrigger;
 
@@ -81,12 +88,33 @@ public class FinalMissileWars extends Game implements Listener {
 	private Team team1;
 	private Team team2;
 
+	private List<PortalLocation> portalLocations;
+	private List<GameObject> gameObjects;
+
+	private LocationData spawnLocation;
+
 	public Team getTeam1() {
 		return team1;
 	}
 
 	public Team getTeam2() {
 		return team2;
+	}
+
+	public List<GameObject> getGameObjects() {
+		return gameObjects;
+	}
+
+	public GameObject getGameObject(GameObjectType type) {
+		return gameObjects.stream().filter(o -> o.getType() == type).findFirst().orElse(null);
+	}
+
+	public List<TeamConfig> getTeamConfigs() {
+		return teamConfigs;
+	}
+
+	public TeamConfig getTeamConfig(MissilewarsTeam team) {
+		return teamConfigs.stream().filter(t -> t.getTeam() == team).findFirst().orElse(null);
 	}
 
 	public MissilewarsTeam getPlayerMissilewarsTeam(Player player) {
@@ -100,10 +128,8 @@ public class FinalMissileWars extends Game implements Listener {
 		return null;
 	}
 
-	public FinalMissileWars(List<PortalLocation> portalLocations) {
+	public FinalMissileWars() {
 		super(NovaFinalMissileWars.getInstance());
-
-		this.portalLocations = portalLocations;
 	}
 
 	@Override
@@ -161,12 +187,23 @@ public class FinalMissileWars extends Game implements Listener {
 		return true;
 	}
 
+	public LocationData getSpawnLocationData() {
+		return spawnLocation;
+	}
+
+	public Location getSpawnLocation() {
+		return spawnLocation.toLocation(world);
+	}
+
 	@Override
 	public void onLoad() {
 		this.world = NovaFinalMissileWars.getInstance().getWorld().getWorld();
 		this.winner = null;
 		this.started = false;
 		this.ended = false;
+		this.gameObjects = new ArrayList<>();
+		this.teamConfigs = new ArrayList<>();
+		this.portalLocations = new ArrayList<>();
 
 		this.winCheckTask = new SimpleTask(() -> {
 			portalLocations.stream().filter(p -> p.isBroken(world)).findFirst().ifPresent(portalLocation -> {
@@ -215,7 +252,58 @@ public class FinalMissileWars extends Game implements Listener {
 			}
 		}, PLAYER_CHECK_TASK_INTERVAL);
 
-		this.lootTrigger = new RepeatingGameTrigger("missilewars.loot", 1L, LOOT_DELAY, new TriggerCallback() {
+		File worldFolder = world.getWorldFolder();
+		File mapConfigFile = new File(worldFolder.getAbsolutePath() + File.separator + "MissileWarsMapData.json");
+		Log.info("MissileWars", "Reading game config from " + mapConfigFile.getAbsolutePath());
+		JSONObject mapConfig = null;
+		try {
+			mapConfig = JSONFileUtils.readJSONObjectFromFile(mapConfigFile);
+		} catch (Exception e) {
+			Log.fatal("MissileWars", "Failed to read file " + mapConfigFile.getAbsolutePath());
+			Bukkit.getServer().shutdown();
+			return;
+		}
+
+		JSONObject gameObjectData = mapConfig.getJSONObject("game_objects");
+
+		JSONObject gameObjectPosition = gameObjectData.getJSONObject("position");
+		JSONObject gameObjectRelative = gameObjectData.getJSONObject("relative");
+		JSONObject gameObjectBounds = gameObjectData.getJSONObject("bounds");
+
+		JSONObject spawnLocations = mapConfig.getJSONObject("spawn_locations");
+		JSONObject portalSamplingAreas = mapConfig.getJSONObject("portal_sampling_areas");
+
+		for (GameObjectType type : GameObjectType.values()) {
+			Vector position = VectorUtils.fromJSONObject(gameObjectPosition.getJSONObject(type.name()));
+			Vector relative = VectorUtils.fromJSONObject(gameObjectRelative.getJSONObject(type.name()));
+			Pair<Vector> bounds = VectorUtils.vectorPairFromJSON(gameObjectBounds.getJSONObject(type.name()));
+
+			gameObjects.add(new GameObject(type, position, relative, bounds));
+
+			Log.debug("MissileWars", "Loaded game object " + type.name());
+		}
+
+		for (MissilewarsTeam team : MissilewarsTeam.values()) {
+			JSONObject spawnLocationData = spawnLocations.getJSONObject(team.name());
+			JSONArray portals = portalSamplingAreas.getJSONArray(team.name());
+
+			List<Vector> portalSamplingAreaList = new ArrayList<>();
+			LocationData locationData = LocationData.fromJSON(spawnLocationData);
+			for (int i = 0; i < portals.length(); i++) {
+				portalSamplingAreaList.add(VectorUtils.fromJSONObject(portals.getJSONObject(i)));
+			}
+
+			teamConfigs.add(new TeamConfig(team, portalSamplingAreaList, locationData));
+		}
+
+		teamConfigs.forEach(tc -> tc.getPortalSamplingAreas().forEach(psa -> portalLocations.add(new PortalLocation(psa, tc.getTeam()))));
+
+		spawnLocation = LocationData.fromJSON(mapConfig.getJSONObject("spawn_location"));
+		NovaFinalMissileWars.getInstance().getGameLobbyMap().setSpawnLocation(spawnLocation.toLocation(world));
+
+		INSTANT_KILL_Y = mapConfig.optInt("instant_kill_y", -1);
+
+		this.lootTrigger = new RepeatingGameTrigger("missilewars.loot", 1L, mapConfig.optLong("loot_interval", 280), new TriggerCallback() {
 			@Override
 			public void run(GameTrigger trigger, TriggerFlag reason) {
 				Class<? extends CustomItem> item = LootManager.getRandom(random);
@@ -235,7 +323,7 @@ public class FinalMissileWars extends Game implements Listener {
 		lootTrigger.setDescription("Give players loot");
 		lootTrigger.addFlag(TriggerFlag.START_ON_GAME_START);
 		lootTrigger.addFlag(TriggerFlag.STOP_ON_GAME_END);
-
+		
 		addTrigger(lootTrigger);
 	}
 
@@ -294,21 +382,7 @@ public class FinalMissileWars extends Game implements Listener {
 			return false;
 		}
 
-		Location location;
-
-		switch (team) {
-		case TEAM_2:
-			location = LocationUtils.getLocation(world, DefaultMapData.GREEN_TEAM_SPAWN_LOCATION, DefaultMapData.GREEN_TEAM_SPAWN_ROTATION);
-			break;
-
-		case TEAM_1:
-			location = LocationUtils.getLocation(world, DefaultMapData.RED_TEAM_SPAWN_LOCATION, DefaultMapData.RED_TEAM_SPAWN_ROTATION);
-			break;
-
-		default:
-			Log.warn("setSpawnAndTeleportToTeam()", "Player " + player.getName() + " broke the space time continuum");
-			return false;
-		}
+		Location location = getTeamConfig(team).getSpawnLocation().toLocation(world);
 
 		player.setBedSpawnLocation(location, true);
 		player.teleport(location);
@@ -328,11 +402,13 @@ public class FinalMissileWars extends Game implements Listener {
 		Task.tryStopTask(winCheckTask);
 		Task.tryStopTask(playerCheckTask);
 
-		if (reason == GameEndReason.WIN) {
-			GameObjectIndex.spawnObject(winner, GameObjectType.WIN, world);
+		VersionIndependentSound.WITHER_DEATH.broadcast();
 
-			// TODO: Detect winner team
-			String message = winner.toTeam().getDisplayName() + " won the game";
+		if (reason == GameEndReason.WIN) {
+			getGameObject(GameObjectType.WIN).spawn(winner.getOpposite(), world);
+
+			String message = winner.toTeam().getTeamColor() + ChatColor.BOLD.toString() + winner.toTeam().getDisplayName() + ChatColor.GREEN + ChatColor.BOLD + " won the game";
+			VersionIndependentUtils.get().broadcastTitle("", message, 0, 80, 20);
 
 			Bukkit.getServer().broadcastMessage(message);
 
@@ -350,31 +426,17 @@ public class FinalMissileWars extends Game implements Listener {
 
 		if (hasStarted()) {
 			MissilewarsTeam team = MissilewarsTeam.get(player);
-
+			Rotation rotation = new Rotation(0, 0);
 			if (team != null) {
-				Rotation rotation = null;
-
-				switch (team) {
-				case TEAM_2:
-					rotation = DefaultMapData.GREEN_TEAM_SPAWN_ROTATION;
-					break;
-
-				case TEAM_1:
-					rotation = DefaultMapData.RED_TEAM_SPAWN_ROTATION;
-					break;
-
-				default:
-					rotation = new Rotation(0, 0);
-					break;
-				}
-
-				Location location = e.getRespawnLocation();
-
-				location.setYaw(rotation.getYaw());
-				location.setPitch(rotation.getPitch());
-
-				e.setRespawnLocation(location);
+				rotation = getTeamConfig(team).getSpawnLocation().getRotation();
 			}
+
+			Location location = e.getRespawnLocation();
+
+			location.setYaw(rotation.getYaw());
+			location.setPitch(rotation.getPitch());
+
+			e.setRespawnLocation(location);
 		}
 	}
 

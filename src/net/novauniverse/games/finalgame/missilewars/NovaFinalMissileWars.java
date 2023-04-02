@@ -35,7 +35,6 @@ import net.novauniverse.games.finalgame.missilewars.game.item.loot.missiles.Jugg
 import net.novauniverse.games.finalgame.missilewars.game.item.loot.missiles.Lightning;
 import net.novauniverse.games.finalgame.missilewars.game.item.loot.missiles.Shieldbuster;
 import net.novauniverse.games.finalgame.missilewars.game.item.loot.missiles.Tomahawk;
-import net.novauniverse.games.finalgame.missilewars.game.world.DefaultMapData;
 import net.novauniverse.games.finalgame.missilewars.lobby.MissileWarsGameLobby;
 import net.novauniverse.games.finalgame.missilewars.lobby.MissileWarsLobbyMapData;
 import net.novauniverse.games.finalgame.missilewars.team.MissileWarsFinalGameTeamProvider;
@@ -53,8 +52,6 @@ import net.zeeraa.novacore.spigot.module.modules.multiverse.PlayerUnloadOption;
 import net.zeeraa.novacore.spigot.module.modules.multiverse.WorldUnloadOption;
 import net.zeeraa.novacore.spigot.teams.Team;
 import net.zeeraa.novacore.spigot.teams.TeamManager;
-import net.zeeraa.novacore.spigot.utils.LocationData;
-import net.zeeraa.novacore.spigot.utils.LocationUtils;
 import net.zeeraa.novacore.spigot.utils.PlayerUtils;
 
 public class NovaFinalMissileWars extends JavaPlugin implements Listener {
@@ -68,6 +65,12 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 	private MultiverseWorld world;
 	
 	private MissileWarsFinalGameTeamProvider finalGameTeamProvider;
+	
+	private MissileWarsGameLobby gameLobbyMap;
+	
+	public MissileWarsGameLobby getGameLobbyMap() {
+		return gameLobbyMap;
+	}
 
 	public static NovaFinalMissileWars getInstance() {
 		return instance;
@@ -167,11 +170,13 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 			return;
 		}
 		
+		gameLobbyMap = new MissileWarsGameLobby(world.getWorld(), new MissileWarsLobbyMapData());
+		
 		GameLobby.getInstance().setDisableAutoAddPlayers(true);
 		GameLobby.getInstance().unloadActiveMap(true);
-		GameLobby.getInstance().setActiveMap(new MissileWarsGameLobby(world.getWorld(), new MissileWarsLobbyMapData(new LocationData(DefaultMapData.SPAWN_LOCATION, DefaultMapData.SPAWN_ROTATION))));
+		GameLobby.getInstance().setActiveMap(gameLobbyMap);
 
-		game = new FinalMissileWars(DefaultMapData.PORTAL_LOCATIONS);
+		game = new FinalMissileWars();
 
 		GameManager.getInstance().setUseTeams(true);
 		GameManager.getInstance().setShowDeathMessage(true);
@@ -213,7 +218,7 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 	}
 
 	public Location getSpawnLocation() {
-		return LocationUtils.getLocation(world, DefaultMapData.SPAWN_LOCATION, DefaultMapData.SPAWN_ROTATION);
+		return game.getSpawnLocation();
 	}
 
 	@EventHandler(priority = EventPriority.NORMAL)

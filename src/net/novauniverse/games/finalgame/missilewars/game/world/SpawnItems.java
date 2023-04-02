@@ -7,7 +7,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 
 import net.novauniverse.games.finalgame.missilewars.NovaFinalMissileWars;
-import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectIndex;
 import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectType;
 import net.novauniverse.games.finalgame.missilewars.team.MissilewarsTeam;
 
@@ -37,7 +36,7 @@ public class SpawnItems {
 
 		Bukkit.getScheduler().scheduleSyncDelayedTask(NovaFinalMissileWars.getInstance(), () -> {
 			if (shield != null && !shield.isDead() && !shield.isOnGround()) {
-				GameObjectIndex.spawnObject(team, GameObjectType.SHIELD, shield.getLocation());
+				NovaFinalMissileWars.getInstance().getGame().getGameObject(GameObjectType.SHIELD).spawn(team, shield.getLocation());
 				shield.remove();
 			}
 		}, 20L);

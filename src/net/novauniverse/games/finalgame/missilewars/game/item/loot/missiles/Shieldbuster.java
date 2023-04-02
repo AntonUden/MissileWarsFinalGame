@@ -7,7 +7,6 @@ import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectTy
 import net.novauniverse.games.finalgame.missilewars.game.item.MissileItem;
 
 public class Shieldbuster extends MissileItem {
-
 	public Shieldbuster() {
 		super(ChatColor.DARK_RED + "Shieldbuster", EntityType.WITCH, GameObjectType.SHIELD_BUSTER);
 	}

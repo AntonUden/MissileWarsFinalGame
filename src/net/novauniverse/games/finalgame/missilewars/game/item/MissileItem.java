@@ -10,7 +10,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectIndex;
+import net.novauniverse.games.finalgame.missilewars.NovaFinalMissileWars;
 import net.novauniverse.games.finalgame.missilewars.game.gameobject.GameObjectType;
 import net.novauniverse.games.finalgame.missilewars.team.MissilewarsTeam;
 import net.zeeraa.novacore.spigot.module.modules.customitems.CustomItem;
@@ -43,7 +43,7 @@ public abstract class MissileItem extends CustomItem {
 				return;
 			}
 
-			GameObjectIndex.spawnObject(team, missile, block.getLocation());
+			NovaFinalMissileWars.getInstance().getGame().getGameObject(missile).spawn(team, block.getLocation());
 			ItemUtils.removeOneFromHand(e.getPlayer());
 			e.setCancelled(true);
 		}

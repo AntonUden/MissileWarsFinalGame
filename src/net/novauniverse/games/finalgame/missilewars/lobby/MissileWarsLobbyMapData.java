@@ -6,7 +6,7 @@ import net.zeeraa.novacore.spigot.gameengine.module.modules.gamelobby.map.GameLo
 import net.zeeraa.novacore.spigot.utils.LocationData;
 
 public class MissileWarsLobbyMapData extends GameLobbyMapData {
-	public MissileWarsLobbyMapData(LocationData spawnLocation) {
-		super(spawnLocation, "MissileWars", "MissileWars", "Default waiting map for missilewars", null, new ArrayList<>());
+	public MissileWarsLobbyMapData() {
+		super(new LocationData(0D, 0D, 0D), "MissileWars", "MissileWars", "Default waiting map for missilewars", null, new ArrayList<>());
 	}
 }

@@ -27,7 +27,6 @@ public class PortalLocation {
 
 	public boolean isBroken(World world) {
 		Location location = LocationUtils.getLocation(world, vector);
-
 		return location.getBlock().getType() != Material.PORTAL;
 	}
 }

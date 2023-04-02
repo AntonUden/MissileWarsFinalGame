@@ -1,5 +1,6 @@
 package net.novauniverse.games.finalgame.missilewars.lobby;
 
+import org.bukkit.Location;
 import org.bukkit.World;
 
 import net.zeeraa.novacore.spigot.gameengine.module.modules.gamelobby.map.GameLobbyMap;
@@ -7,5 +8,9 @@ import net.zeeraa.novacore.spigot.gameengine.module.modules.gamelobby.map.GameLo
 public class MissileWarsGameLobby extends GameLobbyMap {
 	public MissileWarsGameLobby(World world, MissileWarsLobbyMapData mapData) {
 		super(world, mapData, mapData.getSpawnLocation().toLocation(world));
+	}
+	
+	public void setSpawnLocation(Location location) {
+		this.spawnLocation = location;
 	}
 }
