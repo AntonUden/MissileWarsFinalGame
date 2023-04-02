@@ -9,7 +9,7 @@ import net.novauniverse.games.finalgame.missilewars.NovaFinalMissileWars;
 import net.zeeraa.novacore.spigot.teams.Team;
 
 public enum MissilewarsTeam {
-	RED(ChatColor.RED), GREEN(ChatColor.GREEN);
+	TEAM_1(ChatColor.RED), TEAM_2(ChatColor.GREEN);
 
 	private MissilewarsTeam(ChatColor chatColor) {
 		this.chatColor = chatColor;
@@ -18,11 +18,11 @@ public enum MissilewarsTeam {
 	private ChatColor chatColor;
 
 	public MissilewarsTeam getOpposite() {
-		return this == RED ? GREEN : RED;
+		return this == TEAM_1 ? TEAM_2 : TEAM_1;
 	}
 
 	public Team toTeam() {
-		return this == RED ? NovaFinalMissileWars.getInstance().getGame().getRedTeam() : NovaFinalMissileWars.getInstance().getGame().getGreenTeam();
+		return this == TEAM_1 ? NovaFinalMissileWars.getInstance().getGame().getTeam1() : NovaFinalMissileWars.getInstance().getGame().getTeam2();
 	}
 
 	public ChatColor getChatColor() {

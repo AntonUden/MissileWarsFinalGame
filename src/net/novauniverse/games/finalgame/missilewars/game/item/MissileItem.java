@@ -37,7 +37,7 @@ public abstract class MissileItem extends CustomItem {
 
 			Block block = e.getClickedBlock();
 
-			MissilewarsTeam team = MissilewarsTeam.get(null);
+			MissilewarsTeam team = MissilewarsTeam.get(e.getPlayer());
 
 			if (team == null) {
 				return;

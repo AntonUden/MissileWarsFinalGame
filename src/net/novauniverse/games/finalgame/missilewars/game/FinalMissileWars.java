@@ -43,6 +43,7 @@ import net.zeeraa.novacore.commons.tasks.Task;
 import net.zeeraa.novacore.commons.utils.Pair;
 import net.zeeraa.novacore.commons.utils.Rotation;
 import net.zeeraa.novacore.spigot.NovaCore;
+import net.zeeraa.novacore.spigot.abstraction.VersionIndependentUtils;
 import net.zeeraa.novacore.spigot.abstraction.enums.PlayerDamageReason;
 import net.zeeraa.novacore.spigot.abstraction.events.VersionIndependentPlayerAchievementAwardedEvent;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.Game;
@@ -54,7 +55,6 @@ import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.Trigge
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.TriggerFlag;
 import net.zeeraa.novacore.spigot.module.modules.customitems.CustomItem;
 import net.zeeraa.novacore.spigot.module.modules.customitems.CustomItemManager;
-import net.zeeraa.novacore.spigot.module.modules.scoreboard.NetherBoardScoreboard;
 import net.zeeraa.novacore.spigot.tasks.SimpleTask;
 import net.zeeraa.novacore.spigot.teams.Team;
 import net.zeeraa.novacore.spigot.teams.TeamManager;
@@ -78,24 +78,24 @@ public class FinalMissileWars extends Game implements Listener {
 
 	private MissilewarsTeam winner;
 
-	private Team redTeam;
-	private Team greenTeam;
+	private Team team1;
+	private Team team2;
 
-	public Team getRedTeam() {
-		return redTeam;
+	public Team getTeam1() {
+		return team1;
 	}
 
-	public Team getGreenTeam() {
-		return greenTeam;
+	public Team getTeam2() {
+		return team2;
 	}
 
 	public MissilewarsTeam getPlayerMissilewarsTeam(Player player) {
-		if (redTeam.isMember(player)) {
-			return MissilewarsTeam.RED;
+		if (team1.isMember(player)) {
+			return MissilewarsTeam.TEAM_1;
 		}
 
-		if (greenTeam.isMember(player)) {
-			return MissilewarsTeam.GREEN;
+		if (team2.isMember(player)) {
+			return MissilewarsTeam.TEAM_2;
 		}
 		return null;
 	}
@@ -191,25 +191,25 @@ public class FinalMissileWars extends Game implements Listener {
 					}
 				});
 
-				boolean redTeamOnline = false;
-				boolean greenTeamOnline = false;
+				boolean team1Online = team1.getMembers().stream().filter(players::contains).findFirst().isPresent();
+				boolean team2Online = team2.getMembers().stream().filter(players::contains).findFirst().isPresent();
 
-				if (!redTeamOnline && !greenTeamOnline) {
+				if (!team1Online && !team2Online) {
 					Bukkit.getServer().broadcastMessage(ChatColor.RED + "Game ended since both teams where eliminated");
 					endGame(GameEndReason.DRAW);
 				}
 
-				if (!redTeamOnline || !greenTeamOnline) {
-					if (redTeamOnline) {
-						winner = MissilewarsTeam.RED;
+				if (!team1Online || !team2Online) {
+					if (team1Online) {
+						winner = MissilewarsTeam.TEAM_1;
 					}
 
-					if (greenTeamOnline) {
-						winner = MissilewarsTeam.GREEN;
+					if (team2Online) {
+						winner = MissilewarsTeam.TEAM_2;
 					}
 
 					Bukkit.getServer().broadcastMessage(ChatColor.RED + "Game ended since only 1 team is remaining");
-					
+
 					endGame(GameEndReason.WIN);
 				}
 			}
@@ -243,37 +243,41 @@ public class FinalMissileWars extends Game implements Listener {
 	public void onStart() {
 		Pair<Team> participants = NovaFinalMissileWars.getInstance().getFinalGameTeamProvider().getParticipants();
 
-		redTeam = participants.getObject1();
-		greenTeam = participants.getObject2();
-		
-		redTeam.getOnlinePlayers().forEach(this::addPlayer);
-		greenTeam.getOnlinePlayers().forEach(this::addPlayer);
-		
+		team1 = participants.getObject1();
+		team2 = participants.getObject2();
+
+		team1.getOnlinePlayers().forEach(this::addPlayer);
+		team2.getOnlinePlayers().forEach(this::addPlayer);
+
+		Log.debug("MissileWars", "Player count: " + this.players.size());
+
 		Bukkit.getServer().getOnlinePlayers().forEach((player) -> {
-			if (!greenTeam.isMember(player) && !redTeam.isMember(player)) {
+			if (!isPlayerInGame(player)) {
 				player.setGameMode(GameMode.SPECTATOR);
 			}
 		});
+
+		VersionIndependentUtils.get().broadcastTitle(ChatColor.GOLD + ChatColor.BOLD.toString() + "Missilewars", team1.getTeamColor() + team1.getDisplayName() + ChatColor.GOLD + " vs " + team2.getTeamColor() + team2.getDisplayName(), 0, 80, 20);
 
 		started = true;
 		winCheckTask.start();
 		playerCheckTask.start();
 
-		Bukkit.getServer().getOnlinePlayers().forEach((player) -> {
-			PlayerUtils.clearPlayerInventory(player);
-
-			givePlayerItems(player);
-
-			setSpawnAndTeleportToTeam(player);
-		});
-
-		this.sendBeginEvent();
+		Bukkit.getServer().getOnlinePlayers().stream().filter(p -> isPlayerInGame(p)).forEach(this::setupPlayer);
 
 		FinalGameMissileWarsGameStartEvent e = new FinalGameMissileWarsGameStartEvent();
 		Bukkit.getServer().getPluginManager().callEvent(e);
+
+		this.sendBeginEvent();
 	}
 
-	private void givePlayerItems(Player player) {
+	public void setupPlayer(Player player) {
+		PlayerUtils.clearPlayerInventory(player);
+		givePlayerItems(player);
+		setSpawnAndTeleportToTeam(player);
+	}
+
+	public void givePlayerItems(Player player) {
 		player.getInventory().addItem(CustomItemManager.getInstance().getCustomItemStack(GunBlade.class, player));
 
 		player.getInventory().setHelmet(CustomItemManager.getInstance().getCustomItemStack(PlayerHelmet.class, player));
@@ -286,27 +290,25 @@ public class FinalMissileWars extends Game implements Listener {
 		MissilewarsTeam team = MissilewarsTeam.get(player);
 
 		if (team == null) {
+			Log.trace("setSpawnAndTeleportToTeam()", "Player " + player.getName() + " has no team for some reason");
 			return false;
 		}
 
 		Location location;
 
 		switch (team) {
-		case GREEN:
+		case TEAM_2:
 			location = LocationUtils.getLocation(world, DefaultMapData.GREEN_TEAM_SPAWN_LOCATION, DefaultMapData.GREEN_TEAM_SPAWN_ROTATION);
 			break;
 
-		case RED:
+		case TEAM_1:
 			location = LocationUtils.getLocation(world, DefaultMapData.RED_TEAM_SPAWN_LOCATION, DefaultMapData.RED_TEAM_SPAWN_ROTATION);
 			break;
 
 		default:
+			Log.warn("setSpawnAndTeleportToTeam()", "Player " + player.getName() + " broke the space time continuum");
 			return false;
 		}
-
-		player.setDisplayName(team.getChatColor() + player.getName());
-
-		NetherBoardScoreboard.getInstance().setPlayerNameColorBungee(player, team.getChatColor());
 
 		player.setBedSpawnLocation(location, true);
 		player.teleport(location);
@@ -333,10 +335,10 @@ public class FinalMissileWars extends Game implements Listener {
 			String message = winner.toTeam().getDisplayName() + " won the game";
 
 			Bukkit.getServer().broadcastMessage(message);
-		}
 
-		FinalGameMissileWarsGameEndEvent e = new FinalGameMissileWarsGameEndEvent(winner.toTeam(), reason);
-		Bukkit.getPluginManager().callEvent(e);
+			FinalGameMissileWarsGameEndEvent e = new FinalGameMissileWarsGameEndEvent(winner.toTeam(), reason);
+			Bukkit.getPluginManager().callEvent(e);
+		}
 	}
 
 	/* -=-=-=-=-= Listeners =-=-=-=-=- */
@@ -353,11 +355,11 @@ public class FinalMissileWars extends Game implements Listener {
 				Rotation rotation = null;
 
 				switch (team) {
-				case GREEN:
+				case TEAM_2:
 					rotation = DefaultMapData.GREEN_TEAM_SPAWN_ROTATION;
 					break;
 
-				case RED:
+				case TEAM_1:
 					rotation = DefaultMapData.RED_TEAM_SPAWN_ROTATION;
 					break;
 
@@ -379,9 +381,10 @@ public class FinalMissileWars extends Game implements Listener {
 	// Handle join
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerJoin(PlayerJoinEvent e) {
+		Player player = e.getPlayer();
 		if (hasStarted()) {
-			if (players.contains(e.getPlayer().getUniqueId())) {
-				setSpawnAndTeleportToTeam(e.getPlayer());
+			if (players.contains(player.getUniqueId())) {
+				setupPlayer(player);
 			}
 		}
 	}
@@ -397,12 +400,12 @@ public class FinalMissileWars extends Game implements Listener {
 	// Auto respawning players
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerDeath(PlayerDeathEvent e) {
-		ChatColor playerColor = TeamManager.getTeamManager().tryGetPlayerTeamColor(e.getEntity(), net.md_5.bungee.api.ChatColor.AQUA);
+		ChatColor playerColor = TeamManager.getTeamManager().tryGetPlayerTeamColor(e.getEntity(), ChatColor.AQUA);
 		e.setDeathMessage(e.getDeathMessage().replaceAll(Pattern.compile(e.getEntity().getName()).pattern(), playerColor + e.getEntity().getName() + ChatColor.RESET));
 
 		Player killer = e.getEntity().getKiller();
 		if (killer != null) {
-			ChatColor killerColor = TeamManager.getTeamManager().tryGetPlayerTeamColor(killer, net.md_5.bungee.api.ChatColor.AQUA);
+			ChatColor killerColor = TeamManager.getTeamManager().tryGetPlayerTeamColor(killer, ChatColor.AQUA);
 			e.setDeathMessage(e.getDeathMessage().replace(Pattern.compile(killer.getName()).pattern(), killerColor + killer.getName() + ChatColor.RESET));
 		}
 

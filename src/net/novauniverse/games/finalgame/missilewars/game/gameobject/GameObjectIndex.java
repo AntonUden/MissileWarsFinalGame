@@ -57,7 +57,7 @@ public class GameObjectIndex {
 		Vector start = missilesStart.get(missile);
 		Vector end = missilesEnd.get(missile);
 
-		if (team == MissilewarsTeam.GREEN) {
+		if (team == MissilewarsTeam.TEAM_2) {
 			position = position.clone().setZ(-position.getZ());
 			relative = relative.clone().setZ(-relative.getZ());
 			start = start.clone().setZ(-start.getZ());

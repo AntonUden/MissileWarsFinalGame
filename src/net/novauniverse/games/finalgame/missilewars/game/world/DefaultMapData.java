@@ -18,12 +18,12 @@ public class DefaultMapData {
 	public static final List<PortalLocation> PORTAL_LOCATIONS = new ArrayList<PortalLocation>();
 	static {
 		// Red
-		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-27.5, 52, -71.5), MissilewarsTeam.RED));
-		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-25.5, 52, -71.5), MissilewarsTeam.RED));
+		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-27.5, 52, -71.5), MissilewarsTeam.TEAM_1));
+		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-25.5, 52, -71.5), MissilewarsTeam.TEAM_1));
 
 		// Green
-		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-25.5, 52, 72.5), MissilewarsTeam.GREEN));
-		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-27.5, 52, 72.5), MissilewarsTeam.GREEN));
+		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-25.5, 52, 72.5), MissilewarsTeam.TEAM_2));
+		DefaultMapData.PORTAL_LOCATIONS.add(new PortalLocation(new Vector(-27.5, 52, 72.5), MissilewarsTeam.TEAM_2));
 	}
 
 	/* -=-= Team spawn =-=- */

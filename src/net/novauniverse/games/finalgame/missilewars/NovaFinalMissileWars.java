@@ -95,12 +95,20 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 
 		saveDefaultConfig();
 
-		mapFile = new File(getDataFolder().getPath() + File.separator + "missilewars");
+		File dataDirectory = new File(getDataFolder().getPath() + File.separator + "game_data");
+		
+		mapFile = new File(dataDirectory.getPath() + File.separator + "missilewars_map");
 
 		String mapDownloadUrl = getConfig().getString("map_download_url");
 
 		if (!mapFile.exists()) {
-			File zipFile = new File(getDataFolder().getPath() + File.separator + "missilewars.zip");
+			File tempFile = new File(getDataFolder().getPath() + File.separator + "temporary_download_data");
+			if(tempFile.exists()) {
+				tempFile.delete();
+			}
+			tempFile.mkdir();
+			
+			File zipFile = new File(dataDirectory.getPath() + File.separator + "missilewars.zip");
 			if (zipFile.exists()) {
 				zipFile.delete();
 			}
@@ -112,11 +120,21 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 				conn.connect();
 				FileUtils.copyInputStreamToFile(conn.getInputStream(), zipFile);
 
-				UnzipUtility.unzip(zipFile.getAbsolutePath(), mapFile.getAbsolutePath());
+				UnzipUtility.unzip(zipFile.getAbsolutePath(), tempFile.getAbsolutePath());
 
-				Log.info(this.getName(), "Download complete");
+				Log.info(this.getName(), "Download complete. Moving file to final directory");
+				
+				File[]filesInTemp = tempFile.listFiles();
+				if(filesInTemp.length > 0) {
+					File first = filesInTemp[0];
+					FileUtils.moveDirectory(first, mapFile);
+				} else {
+					Log.fatal(this.getName(), "Something went wrong while extracting zip file since " + tempFile.getAbsolutePath() + " is empty");
+					Bukkit.getServer().shutdown();
+				}
 
 				zipFile.delete();
+				tempFile.delete();
 			} catch (IOException e) {
 				Log.fatal(this.getName(), "Failed to download map from " + mapDownloadUrl);
 				e.printStackTrace();
@@ -132,11 +150,7 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 		ModuleManager.require(CustomItemManager.class);
 		ModuleManager.require(GUIManager.class);
 		ModuleManager.require(GameLobby.class);
-
-		GameLobby.getInstance().setDisableAutoAddPlayers(true);
-		GameLobby.getInstance().unloadActiveMap(true);
-		GameLobby.getInstance().setActiveMap(new MissileWarsGameLobby(world.getWorld(), new MissileWarsLobbyMapData(new LocationData(DefaultMapData.SPAWN_LOCATION, DefaultMapData.SPAWN_ROTATION))));
-
+		
 		Log.info(this.getName(), "Loading world");
 		try {
 			world = MultiverseManager.getInstance().createFromFile(mapFile, WorldUnloadOption.DELETE);
@@ -152,6 +166,10 @@ public class NovaFinalMissileWars extends JavaPlugin implements Listener {
 			Bukkit.getPluginManager().disablePlugin(this);
 			return;
 		}
+		
+		GameLobby.getInstance().setDisableAutoAddPlayers(true);
+		GameLobby.getInstance().unloadActiveMap(true);
+		GameLobby.getInstance().setActiveMap(new MissileWarsGameLobby(world.getWorld(), new MissileWarsLobbyMapData(new LocationData(DefaultMapData.SPAWN_LOCATION, DefaultMapData.SPAWN_ROTATION))));
 
 		game = new FinalMissileWars(DefaultMapData.PORTAL_LOCATIONS);
 
