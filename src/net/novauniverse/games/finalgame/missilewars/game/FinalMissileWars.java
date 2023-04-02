@@ -195,6 +195,10 @@ public class FinalMissileWars extends Game implements Listener {
 	public Location getSpawnLocation() {
 		return spawnLocation.toLocation(world);
 	}
+	
+	public GameTrigger getLootTrigger() {
+		return lootTrigger;
+	}
 
 	@Override
 	public void onLoad() {
