@@ -55,7 +55,6 @@ import net.zeeraa.novacore.spigot.teams.TeamManager;
 import net.zeeraa.novacore.spigot.utils.PlayerUtils;
 
 public class NovaFinalMissileWars extends JavaPlugin implements Listener {
-
 	private static NovaFinalMissileWars instance;
 
 	private File mapFile;

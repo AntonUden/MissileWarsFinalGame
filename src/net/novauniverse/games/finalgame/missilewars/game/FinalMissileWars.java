@@ -46,7 +46,6 @@ import net.zeeraa.novacore.commons.log.Log;
 import net.zeeraa.novacore.commons.tasks.Task;
 import net.zeeraa.novacore.commons.utils.JSONFileUtils;
 import net.zeeraa.novacore.commons.utils.Pair;
-import net.zeeraa.novacore.commons.utils.Rotation;
 import net.zeeraa.novacore.spigot.NovaCore;
 import net.zeeraa.novacore.spigot.abstraction.VersionIndependentUtils;
 import net.zeeraa.novacore.spigot.abstraction.enums.PlayerDamageReason;
@@ -325,7 +324,7 @@ public class FinalMissileWars extends Game implements Listener {
 		lootTrigger.setDescription("Give players loot");
 		lootTrigger.addFlag(TriggerFlag.START_ON_GAME_START);
 		lootTrigger.addFlag(TriggerFlag.STOP_ON_GAME_END);
-		
+
 		addTrigger(lootTrigger);
 	}
 
@@ -338,7 +337,7 @@ public class FinalMissileWars extends Game implements Listener {
 
 		team1.getOnlinePlayers().forEach(this::addPlayer);
 		team2.getOnlinePlayers().forEach(this::addPlayer);
-		
+
 		ModuleManager.disable(GameLobby.class);
 
 		Log.debug("MissileWars", "Player count: " + this.players.size());
@@ -410,8 +409,7 @@ public class FinalMissileWars extends Game implements Listener {
 		Bukkit.getServer().getOnlinePlayers().forEach(p -> {
 			p.setGameMode(GameMode.SPECTATOR);
 		});
-		
-		
+
 		if (reason == GameEndReason.WIN) {
 			String message = winner.toTeam().getTeamColor() + ChatColor.BOLD.toString() + winner.toTeam().getDisplayName() + ChatColor.GREEN + ChatColor.BOLD + " won the game";
 			VersionIndependentUtils.get().broadcastTitle("", message, 0, 80, 20);
@@ -420,31 +418,22 @@ public class FinalMissileWars extends Game implements Listener {
 
 			FinalGameMissileWarsGameEndEvent e = new FinalGameMissileWarsGameEndEvent(winner.toTeam(), reason);
 			Bukkit.getPluginManager().callEvent(e);
-			
+
 			getGameObject(GameObjectType.WIN).spawn(winner, world);
 		}
 	}
 
 	/* -=-=-=-=-= Listeners =-=-=-=-=- */
-
-	// Fix rotation
+	// Set respawn location
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerRespawn(PlayerRespawnEvent e) {
 		Player player = e.getPlayer();
 
 		if (hasStarted()) {
 			MissilewarsTeam team = MissilewarsTeam.get(player);
-			Rotation rotation = new Rotation(0, 0);
 			if (team != null) {
-				rotation = getTeamConfig(team).getSpawnLocation().getRotation();
+				e.setRespawnLocation(getTeamConfig(team).getSpawnLocation().toLocation(world));
 			}
-
-			Location location = e.getRespawnLocation();
-
-			location.setYaw(rotation.getYaw());
-			location.setPitch(rotation.getPitch());
-
-			e.setRespawnLocation(location);
 		}
 	}
 
