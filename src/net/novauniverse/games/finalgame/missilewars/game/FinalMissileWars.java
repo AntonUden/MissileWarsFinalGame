@@ -403,7 +403,11 @@ public class FinalMissileWars extends Game implements Listener {
 		Task.tryStopTask(playerCheckTask);
 
 		VersionIndependentSound.WITHER_DEATH.broadcast();
-
+		Bukkit.getServer().getOnlinePlayers().forEach(p -> {
+			p.setGameMode(GameMode.SPECTATOR);
+		});
+		
+		
 		if (reason == GameEndReason.WIN) {
 			getGameObject(GameObjectType.WIN).spawn(winner.getOpposite(), world);
 
