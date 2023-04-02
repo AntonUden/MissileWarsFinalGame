@@ -413,8 +413,6 @@ public class FinalMissileWars extends Game implements Listener {
 		
 		
 		if (reason == GameEndReason.WIN) {
-			getGameObject(GameObjectType.WIN).spawn(winner.getOpposite(), world);
-
 			String message = winner.toTeam().getTeamColor() + ChatColor.BOLD.toString() + winner.toTeam().getDisplayName() + ChatColor.GREEN + ChatColor.BOLD + " won the game";
 			VersionIndependentUtils.get().broadcastTitle("", message, 0, 80, 20);
 
@@ -422,6 +420,8 @@ public class FinalMissileWars extends Game implements Listener {
 
 			FinalGameMissileWarsGameEndEvent e = new FinalGameMissileWarsGameEndEvent(winner.toTeam(), reason);
 			Bukkit.getPluginManager().callEvent(e);
+			
+			getGameObject(GameObjectType.WIN).spawn(winner, world);
 		}
 	}
 
