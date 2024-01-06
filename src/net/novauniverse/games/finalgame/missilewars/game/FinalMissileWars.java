@@ -12,6 +12,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -55,6 +56,7 @@ import net.zeeraa.novacore.spigot.abstraction.events.VersionIndependentPlayerAch
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.Game;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.GameEndReason;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.elimination.PlayerQuitEliminationAction;
+import net.zeeraa.novacore.spigot.gameengine.module.modules.game.events.TeamWinEvent;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.DelayedGameTrigger;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.GameTrigger;
 import net.zeeraa.novacore.spigot.gameengine.module.modules.game.triggers.RepeatingGameTrigger;
@@ -477,9 +479,14 @@ public class FinalMissileWars extends Game implements Listener {
 
 			Bukkit.getServer().broadcastMessage(message);
 
-			FinalGameMissileWarsGameEndEvent e = new FinalGameMissileWarsGameEndEvent(winner.toTeam(), reason);
-			Bukkit.getPluginManager().callEvent(e);
+			// Events
+			Event e1 = new FinalGameMissileWarsGameEndEvent(winner.toTeam(), reason);
+			Bukkit.getPluginManager().callEvent(e1);
 
+			Event e2 = new TeamWinEvent(teamWin);
+			Bukkit.getServer().getPluginManager().callEvent(e2);
+
+			// Win effect
 			getGameObject(GameObjectType.WIN).spawn(winner, world);
 		}
 	}
